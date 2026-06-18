@@ -1,0 +1,167 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+body {
+  @apply bg-primary-dark text-white font-sans;
+}
+
+html,
+body,
+#root {
+  height: 100%;
+  width: 100%;
+}
+
+/* Global Animations */
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes slideIn {
+  from {
+    opacity: 0;
+    transform: translateX(-20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+@keyframes glow {
+  0%, 100% {
+    box-shadow: 0 0 8px rgba(59, 130, 246, 0.2);
+  }
+  50% {
+    box-shadow: 0 0 12px rgba(59, 130, 246, 0.4);
+  }
+}
+
+@keyframes pulse3d {
+  0%, 100% {
+    transform: perspective(1000px) rotateX(0deg);
+  }
+  50% {
+    transform: perspective(1000px) rotateX(1deg);
+  }
+}
+
+.animate-fadeIn {
+  animation: fadeIn 0.5s ease-out;
+}
+
+.animate-slideIn {
+  animation: slideIn 0.5s ease-out;
+}
+
+.animate-glow {
+  animation: glow 3s ease-in-out infinite;
+}
+
+.animate-pulse3d {
+  animation: pulse3d 8s ease-in-out infinite;
+}
+
+/* Glass Morphism Effect */
+.glass-effect {
+  background: rgba(255, 255, 255, 0.05);
+  backdrop-filter: blur(10px);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.editor-container {
+  @apply border border-secondary-dark rounded-lg overflow-hidden bg-editor-dark;
+}
+
+.bug-severity-high {
+  @apply bg-red-900/30 border-l-4 border-red-500 text-red-100;
+}
+
+.bug-severity-medium {
+  @apply bg-yellow-900/30 border-l-4 border-yellow-500 text-yellow-100;
+}
+
+.bug-severity-low {
+  @apply bg-green-900/30 border-l-4 border-green-500 text-green-100;
+}
+
+/* Mobile Responsive Enhancements */
+@media (max-width: 639px) {
+  /* Reduce animations on mobile for better performance */
+  .animate-pulse3d {
+    animation: none;
+  }
+  
+  /* Better touch targets */
+  button, a, [role="button"] {
+    min-height: 44px;
+    min-width: 44px;
+  }
+  
+  /* Prevent horizontal overflow */
+  body {
+    overflow-x: hidden;
+  }
+  
+  /* Better scrolling on mobile */
+  * {
+    -webkit-overflow-scrolling: touch;
+  }
+}
+
+/* Tablet optimizations */
+@media (min-width: 640px) and (max-width: 1023px) {
+  /* Slightly reduce some 3D effects */
+  .animate-pulse3d {
+    animation-duration: 8s;
+  }
+}
+
+/* Print styles - hide animations */
+@media print {
+  .animate-fadeIn,
+  .animate-slideIn,
+  .animate-glow,
+  .animate-pulse3d {
+    animation: none;
+  }
+}
+
+.code-block {
+  @apply bg-secondary-dark border border-secondary-dark rounded-lg p-4 font-mono text-sm overflow-x-auto;
+}
+
+.risk-score-critical {
+  @apply text-red-400;
+}
+
+.risk-score-high {
+  @apply text-orange-400;
+}
+
+.risk-score-medium {
+  @apply text-yellow-400;
+}
+
+.risk-score-low {
+  @apply text-green-400;
+}
+
+.loading-spinner {
+  @apply inline-block animate-spin;
+}
+
