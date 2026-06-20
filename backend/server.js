@@ -17,6 +17,14 @@ app.get('/health', (req, res) => {
   res.json({ status: 'ok', message: 'CodeGuard AI Backend is running' });
 });
 
+// Serve static frontend in production
+const path = require('path');
+const frontendPath = path.join(__dirname, '../dist');
+app.use(express.static(frontendPath));
+app.get('*', (req, res) => {
+  res.sendFile(path.join(frontendPath, 'index.html'));
+});
+
 function startServer(port) {
   const server = app.listen(port, () => {
     console.log(`🚀 CodeGuard AI Backend running on http://localhost:${port}`);
