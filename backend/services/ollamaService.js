@@ -6,7 +6,27 @@ const OLLAMA_TAGS_API = `${OLLAMA_BASE_URL}/api/tags`;
 const PRIMARY_MODEL = process.env.OLLAMA_MODEL || 'qwen2.5-coder:0.5b';
 const FALLBACK_MODELS = ['qwen2.5-coder:0.5b', 'qwen2.5-coder:1.5b'];
 
+// Groq configuration for fallback
+const GROQ_API_URL = process.env.GROQ_API_URL || 'https://api.groq.com/openai/v1/chat/completions';
+const GROQ_MODELS_API = process.env.GROQ_MODELS_API || 'https://api.groq.com/openai/v1/models';
+const GROQ_API_KEY = process.env.GROQ_API_KEY || '';
+const GROQ_MODEL = process.env.GROQ_MODEL || 'llama-3.1-8b-instant';
+const GROQ_FALLBACK_MODELS = (process.env.GROQ_FALLBACK_MODELS || '')
+  .split(',')
+  .map((model) => model.trim())
+  .filter(Boolean);
+const DEFAULT_GROQ_FALLBACK_MODELS = [
+  'llama-3.1-8b-instant',
+  'llama-3.3-70b-versatile',
+  'mixtral-8x7b-32768',
+  'gemma2-9b-it'
+];
+
 class OllamaService {
+  constructor() {
+    this.groqModelsCache = null;
+    this.groqModelsCacheTs = 0;
+  }
   isMemoryError(error) {
     const message = error?.response?.data?.error || '';
     return typeof message === 'string' && message.toLowerCase().includes('requires more system memory');
@@ -140,9 +160,199 @@ class OllamaService {
       }
     }
 
-    const failureDetails = lastError?.response?.data?.error || 'No compatible model available.';
+    const failureDetails = lastError?.response?.data?.error || lastError?.message || 'No compatible model available.';
+    
+    // Check if Groq API is configured and can be tried as a secondary fallback before heuristic fallback
+    if (GROQ_API_KEY) {
+      try {
+        console.log('Ollama was unavailable, attempting fallback to Groq API...');
+        return await this.analyzeCodeWithGroq(code, language);
+      } catch (groqError) {
+        console.warn(`Groq fallback failed: ${groqError.message}`);
+        // Fall through to heuristic fallback
+      }
+    }
+    
     console.warn(`Falling back to heuristic analysis. Reason: ${failureDetails}`);
     return this.getHeuristicFallbackAnalysis(code, language, failureDetails);
+  }
+
+  async generateWithGroqModel(model, prompt) {
+    if (!GROQ_API_KEY) {
+      throw new Error('GROQ_API_KEY is not set');
+    }
+
+    const response = await axios.post(
+      GROQ_API_URL,
+      {
+        model,
+        temperature: 0.1,
+        max_tokens: 900,
+        response_format: { type: 'json_object' },
+        messages: [
+          {
+            role: 'system',
+            content: 'You are a strict code analysis assistant. Return JSON only.'
+          },
+          {
+            role: 'user',
+            content: prompt
+          }
+        ]
+      },
+      {
+        timeout: 120000,
+        headers: {
+          Authorization: `Bearer ${GROQ_API_KEY}`,
+          'Content-Type': 'application/json'
+        }
+      }
+    );
+
+    const content = response?.data?.choices?.[0]?.message?.content;
+    if (!content || typeof content !== 'string') {
+      throw new Error('Groq returned empty content');
+    }
+
+    return content;
+  }
+
+  async getAvailableGroqModels(forceRefresh = false) {
+    if (!GROQ_API_KEY) {
+      return [];
+    }
+
+    const now = Date.now();
+    const cacheValidForMs = 5 * 60 * 1000;
+    if (!forceRefresh && this.groqModelsCache && (now - this.groqModelsCacheTs) < cacheValidForMs) {
+      return this.groqModelsCache;
+    }
+
+    const response = await axios.get(GROQ_MODELS_API, {
+      timeout: 10000,
+      headers: {
+        Authorization: `Bearer ${GROQ_API_KEY}`
+      }
+    });
+
+    const models = Array.isArray(response?.data?.data)
+      ? response.data.data.map((entry) => entry?.id).filter(Boolean)
+      : [];
+
+    this.groqModelsCache = models;
+    this.groqModelsCacheTs = now;
+    return models;
+  }
+
+  async getGroqModelsToTry() {
+    const preferredModels = [GROQ_MODEL, ...GROQ_FALLBACK_MODELS, ...DEFAULT_GROQ_FALLBACK_MODELS]
+      .map((model) => String(model || '').trim())
+      .filter((model, index, list) => model && list.indexOf(model) === index);
+
+    try {
+      const available = await this.getAvailableGroqModels();
+      if (available.length === 0) {
+        return preferredModels;
+      }
+
+      const matched = preferredModels.filter((model) => available.includes(model));
+      if (matched.length > 0) {
+        return matched;
+      }
+
+      return available.slice(0, 1);
+    } catch (error) {
+      return preferredModels;
+    }
+  }
+
+  async analyzeCodeWithGroq(code, language) {
+    const prompt = this.createAnalysisPrompt(code, language);
+    const modelsToTry = await this.getGroqModelsToTry();
+    const safeModelsToTry = modelsToTry.length > 0 ? modelsToTry : [GROQ_MODEL];
+
+    let lastError = null;
+
+    for (const model of safeModelsToTry) {
+      try {
+        console.log(`Sending request to Groq with model: ${model}`);
+        const aiResponse = await this.generateWithGroqModel(model, prompt);
+        console.log(`Groq response received with model: ${model}`);
+        
+        // Parse AI response
+        const result = this.parseAIResponse(aiResponse, language);
+        
+        // Always enhance with heuristic analysis for better line number detection
+        const heuristicBugs = this.analyzeCodeHeuristically(code, language);
+        
+        // Merge heuristic bugs with AI bugs (prioritize heuristic line numbers)
+        const mergedBugs = this.mergeBugResults(result.bugs, heuristicBugs);
+        const filteredMergedBugs = this.filterLanguageFalsePositives(mergedBugs, code, language);
+        const hasIssues = filteredMergedBugs.length > 0;
+
+        const aiExplanation = result.explanation || '';
+        const aiSaysClean = /no issues detected|no bugs found|code is clean/i.test(aiExplanation.toLowerCase());
+        const aiExplanationLooksUnreliable = /```|"bugs"\s*:|^\s*\{[\s\S]*\}\s*$/i.test(aiExplanation.trim());
+
+        const fallbackExplanation = this.generateIssueExplanation(filteredMergedBugs);
+        const fallbackOptimizations = this.generateOptimizationSuggestions(filteredMergedBugs, language);
+
+        const finalOptimization = hasIssues
+          ? ((Array.isArray(result.optimization) && result.optimization.length > 0) ? result.optimization : fallbackOptimizations)
+          : ['No optimizations needed'];
+
+        const finalOptimizations = hasIssues
+          ? ((Array.isArray(result.optimizations) && result.optimizations.length > 0) ? result.optimizations : fallbackOptimizations)
+          : ['No optimizations needed'];
+        
+        const aiFixLooksValid = result.fix && !/no fixes needed|code is clean/i.test(result.fix);
+        const aiFixedCodeLooksValid = result.fixedCode && !/no fixes needed|code is clean/i.test(result.fixedCode);
+        const generatedFix = this.generateHeuristicFix(code, language, filteredMergedBugs);
+
+        return {
+          ...result,
+          bugs: filteredMergedBugs,
+          fix: hasIssues
+            ? (aiFixLooksValid ? result.fix : generatedFix)
+            : 'No fixes needed - code is clean',
+          fixedCode: hasIssues
+            ? (aiFixedCodeLooksValid ? result.fixedCode : generatedFix)
+            : 'No fixes needed - code is clean',
+          explanation: !hasIssues
+            ? 'Code analysis complete. No issues detected. The code follows best practices.'
+            : ((aiExplanation && !aiSaysClean && !aiExplanationLooksUnreliable) ? aiExplanation : fallbackExplanation),
+          optimization: finalOptimization,
+          optimizations: finalOptimizations,
+          riskScore: this.calculateRiskScore(filteredMergedBugs)
+        };
+      } catch (error) {
+        lastError = error;
+        console.error(`Groq model failed: ${model}`, {
+          message: error.message,
+          code: error.code,
+          status: error.response?.status,
+          data: error.response?.data
+        });
+
+        const status = error?.response?.status;
+        const modelMissing = status === 404 || status === 400;
+        const connectivityOrRuntimeError = !error.response || error.code === 'ECONNREFUSED' || error.code === 'ECONNABORTED' || status === 503;
+        const authError = error?.response?.status === 401 || error?.response?.status === 403;
+        const rateLimitError = error?.response?.status === 429;
+
+        if (authError) {
+          throw new Error('Invalid or missing API credentials for configured Groq AI provider.');
+        }
+
+        if (modelMissing || connectivityOrRuntimeError || rateLimitError) {
+          continue;
+        }
+
+        throw new Error(`Groq AI analysis failed: ${error.message}`);
+      }
+    }
+
+    throw lastError || new Error('No Groq models available or responded.');
   }
 
   generateIssueExplanation(bugs) {
@@ -1244,12 +1454,44 @@ Output only JSON.`;
         running: true,
         modelAvailable,
         availableModels: models.map(m => m.name),
-        usingModel: PRIMARY_MODEL
+        usingModel: PRIMARY_MODEL,
+        provider: 'ollama'
       };
     } catch (error) {
+      // Ollama not running, check if Groq is available
+      if (GROQ_API_KEY) {
+        try {
+          const response = await axios.get(GROQ_MODELS_API, {
+            timeout: 5000,
+            headers: {
+              Authorization: `Bearer ${GROQ_API_KEY}`
+            }
+          });
+          const models = Array.isArray(response?.data?.data) ? response.data.data : [];
+          const availableModels = models.map((m) => m.id).filter(Boolean);
+          const modelAvailable = availableModels.includes(GROQ_MODEL);
+
+          return {
+            running: true,
+            modelAvailable,
+            availableModels,
+            usingModel: GROQ_MODEL,
+            provider: 'groq'
+          };
+        } catch (groqError) {
+          return {
+            running: false,
+            modelAvailable: false,
+            provider: 'ollama/groq',
+            error: 'Both Ollama and Groq are unavailable. Using local heuristic rules.'
+          };
+        }
+      }
+
       return {
         running: false,
         modelAvailable: false,
+        provider: 'ollama',
         error: 'Ollama is not running. Please start Ollama first.'
       };
     }
