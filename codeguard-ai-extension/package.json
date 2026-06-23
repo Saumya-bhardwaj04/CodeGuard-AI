@@ -51,7 +51,8 @@
       },
       {
         "command": "codeguard-ai.safeRunFile",
-        "title": "CodeGuard AI: Safe Run File"
+        "title": "CodeGuard AI: Safe Run File",
+        "icon": "$(shield)"
       },
       {
         "command": "codeguard-ai.applyQuickFixForDiagnostic",
