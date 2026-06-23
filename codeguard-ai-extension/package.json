@@ -1,0 +1,127 @@
+{
+  "name": "codeguard-ai-extension",
+  "displayName": "CodeGuard AI",
+  "description": "AI-powered bug detection and fix suggestion tool",
+  "version": "0.0.1",
+  "publisher": "local",
+  "author": "CodeGuard AI Team",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/your-username/codeguard-ai-extension"
+  },
+  "engines": {
+    "vscode": "^1.85.0"
+  },
+  "categories": [
+    "Other"
+  ],
+  "keywords": [
+    "ai",
+    "debugging",
+    "python",
+    "javascript",
+    "java",
+    "static-analysis"
+  ],
+  "files": [
+    "extension.js",
+    "package.json",
+    "README.md",
+    "LICENSE",
+    "media/**",
+    "panels/**",
+    "services/**",
+    "views/**"
+  ],
+  "main": "./extension.js",
+  "contributes": {
+    "commands": [
+      {
+        "command": "codeguard-ai.analyzeCurrentFile",
+        "title": "CodeGuard AI: Analyze Current File"
+      },
+      {
+        "command": "codeguard-ai.explainSelection",
+        "title": "CodeGuard AI: Explain Selected Code"
+      },
+      {
+        "command": "codeguard-ai.applyAutoFix",
+        "title": "CodeGuard AI: Auto Fix Current File"
+      },
+      {
+        "command": "codeguard-ai.safeRunPythonFile",
+        "title": "CodeGuard AI: Safe Run Python File"
+      },
+      {
+        "command": "codeguard-ai.applyQuickFixForDiagnostic",
+        "title": "CodeGuard AI: Apply Quick Fix"
+      },
+      {
+        "command": "codeguard-ai.resetToFullAnalysis",
+        "title": "CodeGuard AI: Reset To Full File Analysis"
+      }
+    ],
+    "keybindings": [
+      {
+        "command": "codeguard-ai.safeRunPythonFile",
+        "key": "ctrl+f5",
+        "when": "editorTextFocus && editorLangId == python"
+      }
+    ],
+    "menus": {
+      "editor/title": [
+        {
+          "command": "codeguard-ai.safeRunPythonFile",
+          "group": "navigation@90",
+          "when": "editorLangId == python"
+        }
+      ]
+    },
+    "viewsContainers": {
+      "activitybar": [
+        {
+          "id": "codeguardAiSidebar",
+          "title": "CodeGuard AI",
+          "icon": "media/codeguard-activity.svg"
+        }
+      ]
+    },
+    "views": {
+      "codeguardAiSidebar": [
+        {
+          "id": "codeguardAiSidebar.view",
+          "name": "Runtime Safety"
+        }
+      ]
+    },
+    "configuration": {
+      "title": "CodeGuard AI",
+      "properties": {
+        "codeguardAi.apiBaseUrl": {
+          "type": "string",
+          "default": "https://codeguard-ai-0bg0.onrender.com",
+          "description": "Base URL of your CodeGuard backend API"
+        },
+        "codeguardAi.analyzePath": {
+          "type": "string",
+          "default": "/api/analyze-code",
+          "description": "Path for analyze endpoint"
+        },
+        "codeguardAi.timeoutMs": {
+          "type": "number",
+          "default": 120000,
+          "description": "API timeout in milliseconds"
+        }
+      }
+    }
+  },
+  "scripts": {
+    "package": "vsce package",
+    "package:local": "npx @vscode/vsce package"
+  },
+  "devDependencies": {
+    "@types/vscode": "^1.85.0",
+    "@vscode/vsce": "^3.2.2"
+  }
+}
