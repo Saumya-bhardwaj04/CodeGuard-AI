@@ -2,18 +2,53 @@ const express = require('express');
 const router = express.Router();
 const ollamaService = require('../services/ollamaService');
 
+// In-memory rate limiting to protect Groq API key from token exhaustion
+const ipRequestCache = new Map();
+const RATE_LIMIT_MS = 60 * 1000; // 1 minute
+const MAX_REQUESTS_PER_MINUTE = 8; // max 8 requests per minute per IP
+
+function checkRateLimit(ip) {
+  const now = Date.now();
+  if (!ipRequestCache.has(ip)) {
+    ipRequestCache.set(ip, [now]);
+    return true;
+  }
+
+  const timestamps = ipRequestCache.get(ip).filter(ts => now - ts < RATE_LIMIT_MS);
+  if (timestamps.length >= MAX_REQUESTS_PER_MINUTE) {
+    return false;
+  }
+
+  timestamps.push(now);
+  ipRequestCache.set(ip, timestamps);
+  return true;
+}
+
 /**
  * POST /api/analyze-code
  * Analyze code and return bugs, fixes, explanations, and optimizations
  */
 router.post('/analyze-code', async (req, res) => {
   try {
+    const ip = req.headers['x-forwarded-for'] || req.socket.remoteAddress;
+    if (!checkRateLimit(ip)) {
+      return res.status(429).json({
+        error: 'Too many requests. Please wait a minute before analyzing more code.'
+      });
+    }
+
     const { code, language } = req.body;
 
     // Validation
     if (!code || !code.trim()) {
       return res.status(400).json({ 
         error: 'Code is required' 
+      });
+    }
+
+    if (code.length > 50000) {
+      return res.status(400).json({
+        error: 'Code length exceeds maximum limit of 50,000 characters. Select a smaller block of code.'
       });
     }
 
