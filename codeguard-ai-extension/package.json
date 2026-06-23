@@ -50,8 +50,8 @@
         "title": "CodeGuard AI: Auto Fix Current File"
       },
       {
-        "command": "codeguard-ai.safeRunPythonFile",
-        "title": "CodeGuard AI: Safe Run Python File"
+        "command": "codeguard-ai.safeRunFile",
+        "title": "CodeGuard AI: Safe Run File"
       },
       {
         "command": "codeguard-ai.applyQuickFixForDiagnostic",
@@ -64,17 +64,17 @@
     ],
     "keybindings": [
       {
-        "command": "codeguard-ai.safeRunPythonFile",
+        "command": "codeguard-ai.safeRunFile",
         "key": "ctrl+f5",
-        "when": "editorTextFocus && editorLangId == python"
+        "when": "editorTextFocus && (editorLangId == python || editorLangId == javascript)"
       }
     ],
     "menus": {
       "editor/title": [
         {
-          "command": "codeguard-ai.safeRunPythonFile",
+          "command": "codeguard-ai.safeRunFile",
           "group": "navigation@90",
-          "when": "editorLangId == python"
+          "when": "editorLangId == python || editorLangId == javascript"
         }
       ]
     },

@@ -227,20 +227,23 @@ async function openEditorForUri(uri) {
   return vscode.window.showTextDocument(doc, { preview: false });
 }
 
-async function runPythonInTerminalForActiveFile() {
-  try {
-    await vscode.commands.executeCommand('python.execInTerminal');
-    return;
-  } catch (error) {
-    const editor = vscode.window.activeTextEditor;
-    if (!editor || editor.document.languageId !== 'python') {
-      throw new Error('Open a Python file first.');
+async function runInTerminalForActiveFile(editor) {
+  const langId = editor.document.languageId;
+  const filePath = editor.document.fileName.replaceAll('"', '\\"');
+  
+  if (langId === 'python') {
+    try {
+      await vscode.commands.executeCommand('python.execInTerminal');
+      return;
+    } catch (error) {
+      const terminal = vscode.window.createTerminal('CodeGuard Safe Run (Python)');
+      terminal.show(true);
+      terminal.sendText(`python "${filePath}"`);
     }
-
-    const filePath = editor.document.fileName.replaceAll('"', '\\"');
-    const terminal = vscode.window.createTerminal('CodeGuard Safe Run');
+  } else if (langId === 'javascript') {
+    const terminal = vscode.window.createTerminal('CodeGuard Safe Run (Node)');
     terminal.show(true);
-    terminal.sendText(`python "${filePath}"`);
+    terminal.sendText(`node "${filePath}"`);
   }
 }
 
@@ -457,16 +460,22 @@ function activate(context) {
     await resetToFullAnalysis();
   });
 
-  const safeRunPythonCommand = vscode.commands.registerCommand('codeguard-ai.safeRunPythonFile', async () => {
+  const safeRunCommand = vscode.commands.registerCommand('codeguard-ai.safeRunFile', async () => {
     const editor = vscode.window.activeTextEditor;
-    if (!editor || editor.document.languageId !== 'python') {
-      vscode.window.showWarningMessage('Open a Python file before using Safe Run.');
+    if (!editor) {
+      vscode.window.showWarningMessage('Open a Python or JavaScript file before using Safe Run.');
+      return;
+    }
+
+    const langId = editor.document.languageId;
+    if (langId !== 'python' && langId !== 'javascript') {
+      vscode.window.showWarningMessage('Safe Run only supports Python and JavaScript files.');
       return;
     }
 
     const code = editor.document.getText();
     if (!code.trim()) {
-      vscode.window.showWarningMessage('Current Python file is empty.');
+      vscode.window.showWarningMessage('Current file is empty.');
       return;
     }
 
@@ -474,10 +483,11 @@ function activate(context) {
       showResultsPanel(context, null, {
         loading: true,
         fileName: editor.document.fileName,
-        language: 'python'
+        language: langId
       });
 
-      const result = await runAnalysisForText(code, 'python', 'safe run pre-check');
+      const apiLang = mapEditorLanguageToApiLanguage(langId);
+      const result = await runAnalysisForText(code, langId, 'safe run pre-check');
       const bugs = Array.isArray(result?.bugs) ? result.bugs : [];
       const highCount = countHighSeverity(bugs);
 
@@ -496,7 +506,7 @@ function activate(context) {
         result,
         {
           fileName: editor.document.fileName,
-          language: 'python',
+          language: apiLang,
           selectionMode: false,
           explainMode: 'Nearby'
         },
@@ -526,7 +536,7 @@ function activate(context) {
         }
       }
 
-      await runPythonInTerminalForActiveFile();
+      await runInTerminalForActiveFile(editor);
     } catch (error) {
       const message = error instanceof Error ? error.message : 'Unknown safe-run error';
       vscode.window.showErrorMessage(`CodeGuard AI safe run failed: ${message}`);
@@ -598,7 +608,7 @@ function activate(context) {
     analyzeCommand,
     explainSelectionCommand,
     applyAutoFixCommand,
-    safeRunPythonCommand,
+    safeRunCommand,
     applyQuickFixForDiagnosticCommand,
     resetToFullAnalysisCommand,
     bugDecorationType,
