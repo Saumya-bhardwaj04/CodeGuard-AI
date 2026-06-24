@@ -4,6 +4,7 @@
   "description": "AI-powered bug detection and fix suggestion tool",
   "version": "0.0.1",
   "publisher": "local",
+  "icon": "media/icon.png",
   "author": "CodeGuard AI Team",
   "license": "MIT",
   "repository": {

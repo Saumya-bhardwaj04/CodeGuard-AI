@@ -17,9 +17,29 @@ const Home = () => {
   const [analysisResult, setAnalysisResult] = useState(null);
   const [error, setError] = useState(null);
   const [isOnEditor, setIsOnEditor] = useState(() => {
-    const saved = sessionStorage.getItem('isOnEditor');
-    return saved === 'true';
+    if (typeof window !== 'undefined') {
+      return window.location.hash === '#/editor';
+    }
+    return false;
   });
+
+  React.useEffect(() => {
+    const handleHashChange = () => {
+      const isEditor = window.location.hash === '#/editor';
+      setIsOnEditor(isEditor);
+      if (!isEditor) {
+        setCode('');
+        setAnalysisResult(null);
+        setError(null);
+      }
+    };
+
+    window.addEventListener('hashchange', handleHashChange);
+    // Sync state to initial hash
+    handleHashChange();
+
+    return () => window.removeEventListener('hashchange', handleHashChange);
+  }, []);
 
   const handleLanguageChange = (language) => {
     setSelectedLanguage(language);
@@ -29,16 +49,11 @@ const Home = () => {
   };
 
   const handleGetStarted = () => {
-    setIsOnEditor(true);
-    sessionStorage.setItem('isOnEditor', 'true');
+    window.location.hash = '/editor';
   };
 
   const handleBackToWelcome = () => {
-    setIsOnEditor(false);
-    sessionStorage.setItem('isOnEditor', 'false');
-    setCode('');
-    setAnalysisResult(null);
-    setError(null);
+    window.location.hash = '';
   };
 
   const handleAnalyzeClick = async () => {
@@ -102,7 +117,7 @@ const Home = () => {
         <>
           {/* Main Content - Show when on editor */}
           <main className="flex-1 overflow-y-auto relative z-10">
-            <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4 sm:py-6 lg:py-8 space-y-4 lg:space-y-5">
+            <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-24 pb-6 sm:pt-28 lg:pt-32 space-y-4 lg:space-y-5">
               {/* Error Message */}
               {error && (
                 <div className="backdrop-blur-md bg-red-900/30 border border-red-500/30 rounded-xl p-4 text-red-300 flex items-center gap-2 shadow-lg">
@@ -114,7 +129,7 @@ const Home = () => {
               {/* Back Button */}
               <button
                 onClick={handleBackToWelcome}
-                className="group inline-flex items-center gap-2 px-4 sm:px-5 py-2 rounded-xl text-sm sm:text-base font-semibold transition-all duration-300 backdrop-blur-md bg-white/5 hover:bg-white/10 border border-white/10 hover:border-white/20 text-white cursor-pointer shadow-lg hover:shadow-xl hover:scale-105 mt-3"
+                className="group inline-flex items-center gap-2 px-4 sm:px-5 py-2 rounded-xl text-sm sm:text-base font-semibold transition-all duration-300 backdrop-blur-md bg-white/5 hover:bg-white/10 border border-white/10 hover:border-white/20 text-white cursor-pointer shadow-lg hover:shadow-xl hover:scale-105"
               >
                 <span className="text-lg group-hover:-translate-x-1 transition-transform">←</span>
                 <span>Go Back</span>
@@ -122,10 +137,21 @@ const Home = () => {
 
               {/* Code Editor Section */}
               <section>
-                <h2 className="text-lg sm:text-xl font-bold text-white mb-3 sm:mb-4 flex items-center gap-2">
-                  <span>📝</span>
-                  Code Editor
-                </h2>
+                <div className="flex items-center justify-between gap-4 mb-3 sm:mb-4 w-full">
+                  <h2 className="text-lg sm:text-xl font-bold text-white flex items-center gap-2">
+                    <span>📝</span>
+                    Code Editor
+                  </h2>
+                  <select
+                    value={selectedLanguage}
+                    onChange={(e) => handleLanguageChange(e.target.value)}
+                    className="bg-white/5 border border-white/20 text-white/90 text-sm px-3 py-1.5 rounded-xl hover:border-white/40 focus:outline-none focus:border-white/60 transition-all duration-200 cursor-pointer font-semibold shadow-md"
+                  >
+                    <option value="java" className="bg-gray-900">Java</option>
+                    <option value="python" className="bg-gray-900">Python</option>
+                    <option value="javascript" className="bg-gray-900">JavaScript</option>
+                  </select>
+                </div>
                 <CodeEditor
                   code={code}
                   onCodeChange={handleCodeChange}
@@ -263,6 +289,26 @@ const Home = () => {
 
         .animate-fadeIn {
           animation: fadeIn 0.5s ease-out;
+        }
+
+        ::-webkit-scrollbar {
+          width: 8px;
+          height: 8px;
+        }
+
+        ::-webkit-scrollbar-track {
+          background: rgba(15, 23, 42, 0.8);
+          border-radius: 5px;
+        }
+
+        ::-webkit-scrollbar-thumb {
+          background: linear-gradient(180deg, rgba(59, 130, 246, 0.3), rgba(139, 92, 246, 0.3));
+          border-radius: 5px;
+          border: 2px solid rgba(15, 23, 42, 0.8);
+        }
+
+        ::-webkit-scrollbar-thumb:hover {
+          background: linear-gradient(180deg, rgba(59, 130, 246, 0.5), rgba(139, 92, 246, 0.5));
         }
       `}</style>
     </div>

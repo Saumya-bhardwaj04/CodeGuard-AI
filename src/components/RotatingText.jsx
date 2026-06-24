@@ -34,10 +34,14 @@ const RotatingText = ({
           position: relative;
           overflow: hidden;
           vertical-align: bottom;
+          padding-bottom: 0.15em;
+          margin-bottom: -0.15em;
         }
 
         .rotating-text {
           display: inline-block;
+          padding-bottom: 0.15em;
+          margin-bottom: -0.15em;
           animation: slideIn 0.3s cubic-bezier(0.34, 1.56, 0.64, 1) forwards;
         }
 

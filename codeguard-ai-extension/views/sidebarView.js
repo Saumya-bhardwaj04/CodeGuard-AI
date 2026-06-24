@@ -46,116 +46,149 @@ class CodeGuardSidebarViewProvider {
   <style>
     body {
       margin: 0;
-      padding: 10px;
+      padding: 14px;
       color: var(--vscode-foreground, #cccccc);
       font-family: var(--vscode-font-family, "Segoe UI", sans-serif);
       background-color: var(--vscode-sideBar-background, #1e1e1e);
       font-size: var(--vscode-font-size, 13px);
+      line-height: 1.4;
     }
     .header {
       display: flex;
+      flex-direction: column;
       align-items: center;
-      gap: 10px;
-      margin-bottom: 16px;
-      padding-bottom: 12px;
-      border-bottom: 1px solid var(--vscode-divider, rgba(255,255,255,0.1));
+      justify-content: center;
+      gap: 8px;
+      margin-bottom: 20px;
+      padding-bottom: 16px;
+      border-bottom: 1px solid var(--vscode-divider, rgba(255,255,255,0.08));
+      text-align: center;
     }
     .header svg {
-      width: 28px;
-      height: 28px;
+      width: 44px;
+      height: 44px;
+      filter: drop-shadow(0 4px 8px rgba(42, 167, 212, 0.25));
+      transition: transform 0.3s ease;
+    }
+    .header svg:hover {
+      transform: scale(1.08) rotate(3deg);
     }
     .header-title {
-      font-size: 15px;
-      font-weight: 600;
-      color: var(--vscode-sideBarTitle-foreground, #ffffff);
+      font-size: 16px;
+      font-weight: 700;
+      letter-spacing: 0.5px;
+      background: linear-gradient(135deg, #7CF1FF 0%, #2AA7D4 100%);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
     }
     .card {
-      border: 1px solid var(--vscode-widget-border, rgba(255,255,255,0.08));
-      border-radius: 6px;
-      padding: 10px 12px;
-      background: var(--vscode-editor-background, rgba(255,255,255,0.02));
-      margin-bottom: 10px;
-      box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+      border: 1px solid var(--vscode-widget-border, rgba(255,255,255,0.06));
+      border-radius: 8px;
+      padding: 12px 14px;
+      background: linear-gradient(135deg, rgba(255,255,255,0.03) 0%, rgba(255,255,255,0.01) 100%);
+      margin-bottom: 12px;
+      box-shadow: 0 4px 15px rgba(0,0,0,0.12);
+      transition: border-color 0.2s ease, transform 0.2s ease;
+    }
+    .card:hover {
+      border-color: rgba(42, 167, 212, 0.3);
+      transform: translateY(-1px);
     }
     .card-title {
-      margin: 0 0 8px;
-      font-size: 12px;
-      font-weight: bold;
+      margin: 0 0 10px;
+      font-size: 11px;
+      font-weight: 700;
       text-transform: uppercase;
-      letter-spacing: 0.5px;
-      color: var(--vscode-sideBarSectionHeader-foreground, #969696);
+      letter-spacing: 0.8px;
+      color: rgba(42, 167, 212, 0.85);
     }
     .label {
       font-size: 11px;
-      opacity: 0.8;
-      color: var(--vscode-descriptionForeground, #888888);
-      margin-top: 6px;
+      opacity: 0.7;
+      color: var(--vscode-descriptionForeground, #969696);
+      margin-top: 8px;
     }
     .value {
       font-weight: 600;
-      font-size: 14px;
+      font-size: 15px;
       color: var(--vscode-editor-foreground, #ffffff);
+      margin-top: 2px;
     }
     .badge {
       display: inline-block;
-      margin-top: 6px;
-      padding: 3px 8px;
-      border-radius: 4px;
-      font-size: 11px;
-      font-weight: bold;
+      margin-top: 10px;
+      padding: 4px 10px;
+      border-radius: 12px;
+      font-size: 10px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
     }
     .badge-critical {
-      background-color: var(--vscode-errorForeground, #f48771);
-      color: #000000;
+      background-color: rgba(244, 135, 113, 0.15);
+      color: #f48771;
+      border: 1px solid rgba(244, 135, 113, 0.3);
     }
     .badge-high {
-      background-color: #f28500;
-      color: #ffffff;
+      background-color: rgba(242, 133, 0, 0.15);
+      color: #f28500;
+      border: 1px solid rgba(242, 133, 0, 0.3);
     }
     .badge-moderate {
-      background-color: var(--vscode-editorWarning-foreground, #cca700);
-      color: #000000;
+      background-color: rgba(204, 167, 0, 0.15);
+      color: #cca700;
+      border: 1px solid rgba(204, 167, 0, 0.3);
     }
     .badge-low {
-      background-color: var(--vscode-editorInfo-foreground, #75beff);
-      color: #000000;
+      background-color: rgba(117, 190, 255, 0.15);
+      color: #75beff;
+      border: 1px solid rgba(117, 190, 255, 0.3);
     }
     .row {
       display: flex;
-      gap: 6px;
-      margin-top: 6px;
+      gap: 8px;
+      margin-top: 8px;
     }
     .btn {
       flex: 1;
       text-decoration: none;
       text-align: center;
-      padding: 7px 10px;
-      border-radius: 4px;
-      color: var(--vscode-button-foreground, #ffffff);
-      background-color: var(--vscode-button-background, #0e639c);
-      font-weight: 500;
+      padding: 9px 12px;
+      border-radius: 6px;
+      color: #0d2330 !important;
+      background: linear-gradient(135deg, #7CF1FF 0%, #2AA7D4 100%);
+      font-weight: 600;
       font-size: 12px;
-      border: 1px solid var(--vscode-button-border, transparent);
+      border: none;
       cursor: pointer;
-      transition: background-color 0.15s ease;
+      box-shadow: 0 4px 10px rgba(42, 167, 212, 0.2);
+      transition: opacity 0.2s ease, transform 0.1s ease, box-shadow 0.2s ease;
     }
     .btn:hover {
-      background-color: var(--vscode-button-hoverBackground, #1177bb);
+      opacity: 0.95;
+      transform: translateY(-1px);
+      box-shadow: 0 6px 14px rgba(42, 167, 212, 0.35);
+    }
+    .btn:active {
+      transform: translateY(0);
     }
     .btn-secondary {
-      color: var(--vscode-button-secondaryForeground, #ffffff);
-      background-color: var(--vscode-button-secondaryBackground, #3a3d41);
+      color: var(--vscode-button-secondaryForeground, #ffffff) !important;
+      background: var(--vscode-button-secondaryBackground, #3a3d41);
+      border: 1px solid rgba(255, 255, 255, 0.05);
+      box-shadow: none;
     }
     .btn-secondary:hover {
-      background-color: var(--vscode-button-secondaryHoverBackground, #45494e);
+      background: var(--vscode-button-secondaryHoverBackground, #45494e);
+      box-shadow: none;
     }
     .note {
-      margin-top: 12px;
+      margin-top: 16px;
       font-size: 11px;
-      color: var(--vscode-descriptionForeground, #888888);
-      line-height: 1.4;
-      border-left: 2px solid var(--vscode-button-background, #0e639c);
-      padding-left: 6px;
+      color: var(--vscode-descriptionForeground, #969696);
+      line-height: 1.5;
+      border-left: 2px solid #2AA7D4;
+      padding-left: 8px;
     }
   </style>
 </head>

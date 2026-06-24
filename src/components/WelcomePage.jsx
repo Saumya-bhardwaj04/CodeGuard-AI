@@ -60,7 +60,7 @@ const WelcomePage = ({ onGetStarted }) => {
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12 sm:py-16 lg:py-20">
 
           {/* HERO */}
-          <section data-reveal className="reveal text-center mb-40 min-h-screen flex flex-col justify-center items-center">
+          <section data-reveal className="reveal text-center mb-16 sm:mb-28 md:mb-40 min-h-[75vh] sm:min-h-screen flex flex-col justify-center items-center">
             {/* Badge */}
             <div className="inline-flex items-center justify-center mb-8">
               <div className="inline-flex items-center px-4 py-2 rounded-full bg-white/10 backdrop-blur-md border border-white/20 text-white text-sm font-medium animate-fade-in-badge">

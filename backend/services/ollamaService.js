@@ -118,19 +118,24 @@ class OllamaService {
           ? ((Array.isArray(result.optimizations) && result.optimizations.length > 0) ? result.optimizations : fallbackOptimizations)
           : ['No optimizations needed'];
         
-        const aiFixLooksValid = result.fix && !/no fixes needed|code is clean/i.test(result.fix);
-        const aiFixedCodeLooksValid = result.fixedCode && !/no fixes needed|code is clean/i.test(result.fixedCode);
+        const isPlaceholder = (str) => !str || /no fixes|code is clean|provide actual code|see explanation|no fixes suggested|analysis completed|review each bug/i.test(String(str));
+        const aiFixLooksValid = result.fix && !isPlaceholder(result.fix);
+        const aiFixedCodeLooksValid = result.fixedCode && !isPlaceholder(result.fixedCode);
         const generatedFix = this.generateHeuristicFix(code, language, filteredMergedBugs);
+        
+        const finalFix = hasIssues
+          ? (aiFixLooksValid ? result.fix : (!isPlaceholder(generatedFix) ? generatedFix : 'Review each bug and apply the suggested corrections in the fix panel.'))
+          : 'No fixes needed - code is clean';
+        
+        const finalFixedCode = hasIssues
+          ? (aiFixedCodeLooksValid ? result.fixedCode : (!isPlaceholder(generatedFix) ? generatedFix : code))
+          : code;
 
         return {
           ...result,
           bugs: filteredMergedBugs,
-          fix: hasIssues
-            ? (aiFixLooksValid ? result.fix : generatedFix)
-            : 'No fixes needed - code is clean',
-          fixedCode: hasIssues
-            ? (aiFixedCodeLooksValid ? result.fixedCode : generatedFix)
-            : 'No fixes needed - code is clean',
+          fix: finalFix,
+          fixedCode: finalFixedCode,
           explanation: !hasIssues
             ? 'Code analysis complete. No issues detected. The code follows best practices.'
             : ((aiExplanation && !aiSaysClean && !aiExplanationLooksUnreliable) ? aiExplanation : fallbackExplanation),
@@ -305,19 +310,24 @@ class OllamaService {
           ? ((Array.isArray(result.optimizations) && result.optimizations.length > 0) ? result.optimizations : fallbackOptimizations)
           : ['No optimizations needed'];
         
-        const aiFixLooksValid = result.fix && !/no fixes needed|code is clean/i.test(result.fix);
-        const aiFixedCodeLooksValid = result.fixedCode && !/no fixes needed|code is clean/i.test(result.fixedCode);
+        const isPlaceholder = (str) => !str || /no fixes|code is clean|provide actual code|see explanation|no fixes suggested|analysis completed|review each bug/i.test(String(str));
+        const aiFixLooksValid = result.fix && !isPlaceholder(result.fix);
+        const aiFixedCodeLooksValid = result.fixedCode && !isPlaceholder(result.fixedCode);
         const generatedFix = this.generateHeuristicFix(code, language, filteredMergedBugs);
+        
+        const finalFix = hasIssues
+          ? (aiFixLooksValid ? result.fix : (!isPlaceholder(generatedFix) ? generatedFix : 'Review each bug and apply the suggested corrections in the fix panel.'))
+          : 'No fixes needed - code is clean';
+        
+        const finalFixedCode = hasIssues
+          ? (aiFixedCodeLooksValid ? result.fixedCode : (!isPlaceholder(generatedFix) ? generatedFix : code))
+          : code;
 
         return {
           ...result,
           bugs: filteredMergedBugs,
-          fix: hasIssues
-            ? (aiFixLooksValid ? result.fix : generatedFix)
-            : 'No fixes needed - code is clean',
-          fixedCode: hasIssues
-            ? (aiFixedCodeLooksValid ? result.fixedCode : generatedFix)
-            : 'No fixes needed - code is clean',
+          fix: finalFix,
+          fixedCode: finalFixedCode,
           explanation: !hasIssues
             ? 'Code analysis complete. No issues detected. The code follows best practices.'
             : ((aiExplanation && !aiSaysClean && !aiExplanationLooksUnreliable) ? aiExplanation : fallbackExplanation),
@@ -591,6 +601,27 @@ Output only JSON.`;
     const normalizeResult = (result) => {
       const complexity = result.complexity || { time: result.timeComplexity || 'Unknown', space: result.spaceComplexity || 'Unknown' };
 
+      const stripLineNumbers = (text) => {
+        if (typeof text !== 'string') return text;
+        const lines = text.split('\n');
+        let numberedLinesCount = 0;
+        let nonEmptyLinesCount = 0;
+        
+        lines.forEach(line => {
+          const trimmed = line.trim();
+          if (!trimmed) return;
+          nonEmptyLinesCount++;
+          if (/^\s*\d+[:|]\s?/.test(line)) {
+            numberedLinesCount++;
+          }
+        });
+
+        if (nonEmptyLinesCount > 0 && (numberedLinesCount / nonEmptyLinesCount) > 0.6) {
+          return lines.map(line => line.replace(/^\s*\d+[:|]\s?/, '')).join('\n');
+        }
+        return text;
+      };
+
       const normalizedBugs = (Array.isArray(result.bugs) ? result.bugs : []).map((bug, index) => {
         // Try to extract line number from bug description or issue text if not present
         let lineNum = bug.line || 0;
@@ -627,10 +658,16 @@ Output only JSON.`;
         return !isFalsePositive;
       });
 
+      let rawFixed = result.fixedCode || result.fix || 'No fixes suggested';
+      rawFixed = stripLineNumbers(rawFixed);
+
+      let rawFixDesc = result.fix || result.fixedCode || 'No fixes suggested';
+      rawFixDesc = stripLineNumbers(rawFixDesc);
+
       return {
         bugs: normalizedBugs,
-        fixedCode: normalizedBugs.length === 0 ? 'No fixes needed - code is clean' : (result.fixedCode || result.fix || 'No fixes suggested'),
-        fix: normalizedBugs.length === 0 ? 'No fixes needed - code is clean' : (result.fix || result.fixedCode || 'No fixes suggested'),
+        fixedCode: normalizedBugs.length === 0 ? 'No fixes needed - code is clean' : rawFixed,
+        fix: normalizedBugs.length === 0 ? 'No fixes needed - code is clean' : rawFixDesc,
         explanation: normalizedBugs.length === 0 ? 'Code analysis complete. No issues detected. The code follows best practices.' : (result.explanation || 'Analysis completed'),
         optimizations: normalizedBugs.length === 0 ? ['No optimizations needed'] : (Array.isArray(result.optimizations) ? result.optimizations : (Array.isArray(result.optimization) ? result.optimization : [])),
         optimization: normalizedBugs.length === 0 ? ['No optimizations needed'] : (Array.isArray(result.optimization) ? result.optimization : (Array.isArray(result.optimizations) ? result.optimizations : [])),

@@ -285,7 +285,10 @@ function activate(context) {
   const viewProviderRegistration = vscode.window.registerWebviewViewProvider('codeguardAiSidebar.view', sidebarProvider);
 
   const applyAutoFix = async () => {
-    if (!lastAnalysisContext?.result?.fixedCode || /no fixes needed/i.test(String(lastAnalysisContext.result.fixedCode))) {
+    const fixedCode = lastAnalysisContext?.result?.fixedCode;
+    const isPlaceholder = !fixedCode || /no fixes|code is clean|provide actual code|see explanation|no fixes suggested|analysis completed|review each bug/i.test(String(fixedCode));
+
+    if (isPlaceholder) {
       vscode.window.showInformationMessage('No auto-fix is available for the current analysis.');
       return;
     }
@@ -298,13 +301,20 @@ function activate(context) {
 
     try {
       const editor = await openEditorForUri(targetUri);
+      const currentCode = editor.document.getText();
+
+      if (currentCode.trim() === String(fixedCode).trim()) {
+        vscode.window.showInformationMessage('No changes needed. The code is already up-to-date.');
+        return;
+      }
+
       const fullRange = new vscode.Range(
         editor.document.positionAt(0),
-        editor.document.positionAt(editor.document.getText().length)
+        editor.document.positionAt(currentCode.length)
       );
 
       await editor.edit((editBuilder) => {
-        editBuilder.replace(fullRange, String(lastAnalysisContext.result.fixedCode));
+        editBuilder.replace(fullRange, String(fixedCode));
       });
 
       const updatedCode = editor.document.getText();
