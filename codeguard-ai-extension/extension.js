@@ -224,7 +224,13 @@ function applySingleLineQuickFix(lineText, bugType, languageId) {
 
 async function openEditorForUri(uri) {
   const doc = await vscode.workspace.openTextDocument(uri);
-  return vscode.window.showTextDocument(doc, { preview: false });
+  const visibleEditors = vscode.window.visibleTextEditors;
+  const existingEditor = visibleEditors.find(e => e.document.uri.toString() === uri.toString());
+  
+  return vscode.window.showTextDocument(doc, {
+    viewColumn: existingEditor ? existingEditor.viewColumn : vscode.ViewColumn.One,
+    preview: false
+  });
 }
 
 async function runInTerminalForActiveFile(editor) {
