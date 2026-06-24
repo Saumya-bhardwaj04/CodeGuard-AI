@@ -1,9 +1,9 @@
 {
   "name": "codeguard-ai-extension",
-  "displayName": "CodeGuard AI",
+  "displayName": "CodeGuard AI - Bug Detection & Fixes",
   "description": "AI-powered bug detection and fix suggestion tool",
   "version": "0.0.1",
-  "publisher": "local",
+  "publisher": "codeguard-ai-official",
   "icon": "media/icon.png",
   "author": "CodeGuard AI Team",
   "license": "MIT",
