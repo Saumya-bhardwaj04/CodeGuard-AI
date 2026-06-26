@@ -1399,7 +1399,13 @@ Output ONLY the JSON object.`;
       /risk score/i,
       /optimization suggestions?/i,
       /^analysis$/i,
-      /severity:\s*(low|medium|high)/i
+      /severity:\s*(low|medium|high)/i,
+      /redundant/i,
+      /missing comment/i,
+      /style/i,
+      /naming convention/i,
+      /formatting/i,
+      /indentation/i
     ];
 
     const languageFalsePositivePatterns = {
