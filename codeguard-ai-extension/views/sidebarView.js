@@ -235,6 +235,9 @@ class CodeGuardSidebarViewProvider {
     <a class="btn btn-secondary" href="command:codeguard-ai.safeRunFile">Safe Run</a>
   </div>
   <div class="note">Tip: Use Safe Run (Ctrl+F5) to verify runtime exceptions in Python & JS files before execution.</div>
+  <div class="note" style="border-left-color: #7CF1FF;">
+    🌐 Try CodeGuard AI in your browser: <a href="https://codeguard-ai-0bg0.onrender.com" target="_blank" style="color: #7CF1FF; text-decoration: underline;">codeguard-ai-0bg0.onrender.com</a>
+  </div>
 </body>
 </html>`;
   }

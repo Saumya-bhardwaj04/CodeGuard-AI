@@ -63,6 +63,7 @@ const Home = () => {
     }
 
     setIsAnalyzing(true);
+    setAnalysisResult(null);
     setError(null);
 
     try {
@@ -71,12 +72,12 @@ const Home = () => {
       setAnalysisResult(result);
     } catch (err) {
       const message = err?.message || '';
-      const isServiceFailure = /analysis service encountered|unable to connect|something went wrong|taking longer than expected/i.test(message.toLowerCase());
-      if (isServiceFailure) {
-        // Hide backend/service failures from UI to avoid alarming users.
-        setError(null);
+      if (message.includes('Unable to connect') || message.includes('Network Error')) {
+        setError('Cannot connect to the CodeGuard backend. Make sure the backend server is running (npm run dev in the backend folder).');
+      } else if (message.includes('taking longer than expected') || message.includes('ECONNABORTED')) {
+        setError('Analysis timed out. Please try again with a smaller code snippet.');
       } else {
-        setError(message || 'Analysis failed. Please try again.');
+        setError(message || 'Analysis failed. Please check that the backend server is running and try again.');
       }
     } finally {
       setIsAnalyzing(false);
@@ -159,8 +160,25 @@ const Home = () => {
                 />
               </section>
 
+              {/* Loading State */}
+              {isAnalyzing && (
+                <section className="flex flex-col items-center justify-center py-16 space-y-4">
+                  <div className="relative w-20 h-20">
+                    <div className="absolute inset-0 border-4 border-blue-500/20 rounded-full"></div>
+                    <div className="absolute inset-0 border-4 border-transparent border-t-blue-400 rounded-full animate-spin"></div>
+                    <div className="absolute inset-0 flex items-center justify-center text-2xl animate-pulse">🤖</div>
+                  </div>
+                  <h3 className="text-xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-blue-300 to-cyan-200 animate-pulse">
+                    Analyzing Code...
+                  </h3>
+                  <p className="text-blue-200/60 text-sm max-w-md text-center">
+                    CodeGuard AI is reviewing your logic and hunting for bugs. This may take 10-30 seconds depending on your hardware.
+                  </p>
+                </section>
+              )}
+
               {/* Results Section - Only show if analysis has been performed */}
-              {analysisResult && (
+              {analysisResult && !isAnalyzing && (
                 <section className="space-y-8 animate-fadeIn">
                   {/* Show different message based on bugs count */}
                   {analysisResult.bugs?.length === 0 ? (
@@ -206,7 +224,13 @@ const Home = () => {
 
                   {/* Fix Suggestion */}
                   <div>
-                    <FixSuggestion fix={analysisResult.fix} />
+                    <FixSuggestion 
+                      fix={analysisResult.fixedCode || analysisResult.fix} 
+                      onApplyFix={(code) => {
+                        handleCodeChange(code);
+                        window.scrollTo({ top: 0, behavior: 'smooth' });
+                      }}
+                    />
                   </div>
 
                   {/* Explanation */}

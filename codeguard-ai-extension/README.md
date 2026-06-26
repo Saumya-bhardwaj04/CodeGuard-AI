@@ -1,81 +1,42 @@
-# CodeGuard AI VS Code Extension Guide
+# CodeGuard AI - Bug Detection & Fix Suggestions
 
-This guide walks you through testing, packaging, and publishing the newly copied **CodeGuard AI** VS Code extension.
-
----
-
-## 1. Local Testing and Development
-
-To test the extension locally:
-1. Open the `codeguard-ai-extension` folder in a new VS Code window.
-2. Make sure your CodeGuard AI backend is running (e.g., at `http://localhost:3001`).
-3. Press **F5** in VS Code. This will open a new window called the **Extension Development Host**.
-4. In the Extension Development Host window:
-   - Open a project or create a test file (e.g., a JavaScript file with buggy code).
-   - Press `Ctrl + Shift + P` to open the Command Palette and run `CodeGuard AI: Analyze Current File`.
-   - The analysis results will be displayed in the results webview panel and the sidebar!
+CodeGuard AI is an advanced, AI-powered coding companion designed to analyze your code, catch potential bugs, suggest high-quality fixes, and analyze runtime complexity—all while keeping your workflow secure.
 
 ---
 
-## 2. Packaging the Extension (`.vsix`)
-
-Before publishing, you must compile and package the extension into a `.vsix` file.
-
-1. Open your terminal in the `codeguard-ai-extension` directory.
-2. Run the packaging script:
-   ```bash
-   npm run package:local
-   ```
-3. This generates a file named `codeguard-ai-extension-0.0.1.vsix` in the directory. You can distribute this file directly to others, who can install it manually in VS Code via:
-   - Command Palette (`Ctrl + Shift + P`) $\rightarrow$ **Extensions: Install from VSIX...**
+### 🌐 Try CodeGuard AI in Your Web Browser!
+Don't want to install the extension yet? You can try out the full CodeGuard AI experience right in your browser!
+👉 **Visit our Web Application**: [https://codeguard-ai-0bg0.onrender.com](https://codeguard-ai-0bg0.onrender.com)
 
 ---
 
-## 3. Publishing to the VS Code Marketplace
+## Key Features
 
-To publish your extension so anyone can download it from the VS Code Marketplace:
+- **🔍 Smart Bug Detection**: Finds logical errors, division by zero risks, resource leaks, array index out of bounds, and more.
+- **⚡ One-Click Auto Fix**: Apply suggested AI fixes directly to your active file with a single click.
+- **🧠 Logical Explanations**: Understand the root cause of issues and learn best practices.
+- **📈 Complexity Analysis**: Get instantaneous analysis of Time and Space complexity for your functions.
+- **🛡️ Safe Run**: Run your Python or JavaScript code safely inside isolated terminal scopes.
 
-### Step 1: Create a Microsoft Account
-If you don't have one, sign up for a Microsoft Account at [Microsoft Live](https://login.live.com/).
+## Getting Started
 
-### Step 2: Create an Azure DevOps Organization
-1. Go to [Azure DevOps](https://aex.dev.azure.com/) and sign in with your Microsoft account.
-2. Create a new organization (e.g., `codeguard-ai-org`).
+### Method A: Analyze via Command Palette
+1. Open any supported code file (Python, JavaScript, Java).
+2. Press `Ctrl + Shift + P` (or `Cmd + Shift + P` on macOS) to open the Command Palette.
+3. Search and select: **`CodeGuard AI: Analyze Current File`**.
+4. The analysis results will load inside the sidebar and a dedicated webview panel.
 
-### Step 3: Generate a Personal Access Token (PAT)
-1. In your Azure DevOps organization page, click the **User Settings** icon in the top-right corner next to your profile picture and select **Personal access tokens**.
-2. Click **New Token**.
-3. Configure the token:
-   - **Name**: `vsce-publisher` (or any name you prefer)
-   - **Organization**: Select **All accessible organizations** (this is required).
-   - **Expiration**: Set to 90 days or custom duration.
-   - **Scopes**: Select **Custom defined**, scroll down to find **Marketplace**, and check **Acquire** and **Manage**.
-4. Click **Create** and **copy the PAT key immediately** (it will not be shown again).
+### Method B: Analyze via Editor Title Bar
+1. Open any supported Python (`.py`) or JavaScript (`.js`) file.
+2. Look at the top-right corner of your editor tab bar.
+3. Click the **CodeGuard Shield** icon to run the analysis!
 
-### Step 4: Create a Marketplace Publisher
-1. Go to the [Visual Studio Marketplace Publisher Portal](https://marketplace.visualstudio.com/manage).
-2. Sign in with the same Microsoft account.
-3. Click **Create Publisher** and fill in your details:
-   - **ID**: A unique identifier for your publisher name (e.g., `codeguard-ai`).
-   - **Name**: The display name for the publisher.
-4. Update `package.json` in your extension project:
-   - Replace `"publisher": "local"` with your new publisher ID (e.g., `"publisher": `"codeguard-ai"`).
+## Keyboard Shortcuts
+* **`Ctrl + F5`** (or **`Cmd + F5`** on macOS): Trigger **CodeGuard Safe Run** for the active file.
 
-### Step 5: Publish the Extension
-You can publish either via the command line or manually.
+---
 
-#### Option A: Command Line (Recommended)
-1. Log in to your publisher profile from your terminal:
-   ```bash
-   npx @vscode/vsce login <your-publisher-id>
-   ```
-   Paste the Personal Access Token (PAT) when prompted.
-2. Publish your extension:
-   ```bash
-   npx @vscode/vsce publish
-   ```
-
-#### Option B: Manual Web Upload
-1. Go to the [Visual Studio Marketplace Publisher Portal](https://marketplace.visualstudio.com/manage).
-2. Select your publisher.
-3. Drag and drop your packaged `codeguard-ai-extension-0.0.1.vsix` file into the portal to upload and publish it.
+## Feedback & Support
+Have ideas, bugs, or feature suggestions? Let us know:
+* **Email**: [samisharma000@gmail.com](mailto:samisharma000@gmail.com)
+* **GitHub Repository**: [CodeGuard AI on GitHub](https://github.com/Saumya-bhardwaj04/CodeGuard-AI)

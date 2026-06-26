@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 
-const FixSuggestion = ({ fix }) => {
+const FixSuggestion = ({ fix, onApplyFix }) => {
   const [copied, setCopied] = useState(false);
 
   const copyToClipboard = () => {
@@ -21,12 +21,22 @@ const FixSuggestion = ({ fix }) => {
           <span className="text-green-400 text-lg">✓</span>
           <h2 className="text-lg font-bold text-green-300">Suggested Fix</h2>
         </div>
-        <button
-          onClick={copyToClipboard}
-          className="px-3 py-1 bg-green-600/20 hover:bg-green-600/40 text-green-300 rounded text-sm font-semibold transition"
-        >
-          {copied ? '✓ Copied' : '📋 Copy'}
-        </button>
+        <div className="flex items-center gap-2">
+          <button
+            onClick={copyToClipboard}
+            className="px-3 py-1 bg-green-600/20 hover:bg-green-600/40 text-green-300 rounded text-sm font-semibold transition cursor-pointer"
+          >
+            {copied ? '✓ Copied' : '📋 Copy'}
+          </button>
+          {onApplyFix && (
+            <button
+              onClick={() => onApplyFix(fix)}
+              className="px-3 py-1 bg-green-500 hover:bg-green-400 text-black font-bold rounded text-sm transition flex items-center gap-1 shadow-md hover:scale-105 active:scale-95 cursor-pointer"
+            >
+              <span>⚡</span> Apply Fix
+            </button>
+          )}
+        </div>
       </div>
 
       <div className="p-4">

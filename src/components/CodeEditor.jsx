@@ -123,13 +123,22 @@ def fetch_user(user_id):
       const model = monacoEditorRef.current.getModel();
       const newLanguage = language === 'javascript' ? 'javascript' : language;
       monaco.editor.setModelLanguage(model, newLanguage);
-      
-      // Set sample code for the language if editor is empty
-      if (!code || code.trim() === '') {
-        monacoEditorRef.current.setValue(sampleCodes[language]);
-      }
     }
   }, [language]);
+
+  // Update editor value if code changes from the outside (e.g. from Auto Fix or language change)
+  useEffect(() => {
+    if (monacoEditorRef.current) {
+      const currentVal = monacoEditorRef.current.getValue();
+      const targetVal = (code === undefined || code === '') ? sampleCodes[language] : code;
+      if (targetVal !== currentVal) {
+        monacoEditorRef.current.setValue(targetVal);
+      }
+      if (code !== targetVal) {
+        onCodeChange(targetVal);
+      }
+    }
+  }, [code, language, onCodeChange]);
 
   // Handle responsive layout changes
   useEffect(() => {
