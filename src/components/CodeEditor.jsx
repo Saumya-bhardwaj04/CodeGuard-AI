@@ -50,7 +50,6 @@ const CodeEditor = ({ code, onCodeChange, language }) => {
     }
 }`,
     python: `def process_list(items=[]):  # Bug: mutable default
-    count = 0
     total = 0
     
     for item in items:
@@ -58,13 +57,13 @@ const CodeEditor = ({ code, onCodeChange, language }) => {
         if total > 100:
             break
     
-    print(undefined_var)  # Bug: undefined variable
+    print(summary)  # Bug: 'summary' is never defined - undefined variable
     return total
 
 
 def fetch_user(user_id):
     user = get_user(user_id)
-    print(user["name"])  # Bug: no null check`,
+    print(user["name"])  # Bug: no null/None check before subscript access`,
     javascript: `async function fetchData(userId) {
     // Bug: no error handling
     const response = await fetch(\`/api/users/\${userId}\`);

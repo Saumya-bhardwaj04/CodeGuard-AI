@@ -572,26 +572,65 @@ class OllamaService {
 
       let rebuiltCode = transformedLines.join('\n');
 
-      // Add a conservative None guard for direct key access patterns.
+      // Fix: plain dict key access → safe .get() with a None guard
+      // Converts: print(obj["key"]) → if obj is not None:\n    print(obj.get("key"))
       rebuiltCode = rebuiltCode.replace(
-        /^(\s*)(print\((\w+)\[[^\]]+\]\))\s*$/gm,
-        (match, indent, expression, objName) => `${indent}if ${objName} is not None:\n${indent}    ${expression}`
+        /^(\s*)((?:print|return|result\s*=)\s*\(?\s*(\w+)\[(['"][^'"]+['"])\]\)?\s*)$/gm,
+        (match, indent, expression, objName, key) => {
+          const safeExpr = expression.replace(`${objName}[${key}]`, `${objName}.get(${key})`);
+          return `${indent}if ${objName} is not None:\n${indent}    ${safeExpr.trim()}`;
+        }
       );
 
-      // Add placeholder definitions for undefined variables inferred from bug text.
+      // Fix: external function call assigned to variable — wrap in try/except
+      // Detects pattern:  var = some_external_func(args)
+      // Only wraps when the called function has no `def` in the file (external call).
+      const externalCallLines = [];
+      rebuiltCode.split('\n').forEach((line, idx) => {
+        const callMatch = line.match(/^(\s*)(\w+)\s*=\s*([a-zA-Z_]\w*)\s*\(([^)]*)\)\s*$/);
+        if (callMatch) {
+          const [, indent, lhs, funcName] = callMatch;
+          const isBuiltin = /^(int|str|float|bool|list|dict|set|tuple|len|range|open|sorted|reversed|enumerate|zip|map|filter|print|type|super|input|abs|round|min|max|sum)$/.test(funcName);
+          const isDefined = new RegExp(`^\\s*def\\s+${funcName}\\s*\\(`, 'm').test(rebuiltCode);
+          if (!isBuiltin && !isDefined) {
+            externalCallLines.push({ idx, indent, lhs, funcName });
+          }
+        }
+      });
+
+      if (externalCallLines.length > 0) {
+        const codeLines = rebuiltCode.split('\n');
+        // Process in reverse order so index positions stay valid
+        [...externalCallLines].reverse().forEach(({ idx, indent, lhs, funcName }) => {
+          const originalLine = codeLines[idx];
+          // Check if already inside a try block (look back up to 5 lines)
+          const alreadyInTry = codeLines.slice(Math.max(0, idx - 5), idx).some(l => /^\s*try\s*:/.test(l));
+          if (!alreadyInTry) {
+            codeLines.splice(idx, 1,
+              `${indent}try:`,
+              `${indent}    ${originalLine.trim()}`,
+              `${indent}except Exception:`,
+              `${indent}    ${lhs} = None`
+            );
+          }
+        });
+        rebuiltCode = codeLines.join('\n');
+      }
+
+      // Add placeholder definitions for truly undefined variables (not in code at all)
       const missingVariables = (bugs || [])
         .filter((bug) => /undefined variable/i.test(`${bug.type || ''} ${bug.issue || ''} ${bug.description || ''}`))
         .map((bug) => {
           const text = `${bug.issue || ''} ${bug.description || ''}`;
-          const match = text.match(/['"]([a-zA-Z_]\w*)['"]/);
-          return match && match[1] ? match[1] : null;
+          const m = text.match(/['"]([a-zA-Z_]\w*)['"]/);
+          return m && m[1] ? m[1] : null;
         })
         .filter(Boolean)
         .filter((name, index, arr) => arr.indexOf(name) === index)
-        .filter((name) => !new RegExp(`^\\s*${name}\\s*=`, 'm').test(rebuiltCode));
+        .filter((name) => !new RegExp(`\\b${name}\\s*=(?!=)`, 'm').test(rebuiltCode));
 
       if (missingVariables.length > 0) {
-        const declarationBlock = missingVariables.map((name) => `${name} = None`).join('\n');
+        const declarationBlock = missingVariables.map((name) => `${name} = None  # TODO: assign appropriate value`).join('\n');
         rebuiltCode = `${declarationBlock}\n\n${rebuiltCode}`;
       }
 
@@ -1459,6 +1498,55 @@ Output ONLY the JSON object.`;
         const variableName = this.extractVariableNameFromBugText(combined);
         if (variableName && this.isVariableUsedInCode(code, variableName, language)) {
           return false;
+        }
+      }
+
+      // ── AI hallucination guard: "undefined variable X" where X IS assigned ──
+      // The AI sometimes pattern-matches on suspicious-looking variable names
+      // (e.g. "undefined_var") and flags them even when they are clearly assigned
+      // before use. Verify against the actual source before keeping the bug.
+      if (/undefined\s+variable|variable.*not\s+(?:defined|declared)|used\s+before.*assign|referenced\s+before.*assign/i.test(combined)) {
+        const varNameMatch =
+          combined.match(/variable\s+['"`]([a-zA-Z_]\w*)['"`]/i) ||
+          combined.match(/['"`]([a-zA-Z_]\w*)['"`]\s+(?:is\s+)?(?:used|referenced|not\s+defined)/i) ||
+          combined.match(/variable\s+(\w+)\s+(?:is\s+)?(?:used|not\s+defined)/i);
+        if (varNameMatch && varNameMatch[1]) {
+          const varName = varNameMatch[1];
+          // If there is ANY assignment to this variable anywhere in the file, it is defined.
+          const isAssigned =
+            new RegExp(`\\b${varName}\\s*=(?!=)`, 'm').test(code) ||
+            new RegExp(`\\bdef\\s+\\w+\\s*\\([^)]*\\b${varName}\\b`, 'm').test(code) ||
+            new RegExp(`\\bfor\\s+${varName}\\s+in\\b`, 'm').test(code);
+          if (isAssigned) return false;
+        }
+      }
+
+      // ── AI hallucination guard: external function calls flagged as "not defined" ──
+      // In code snippets / demos, functions like get_user(), fetch_data() etc.
+      // are legitimately external (imported or injected). The AI wrongly flags
+      // them as missing when the function is CALLED but has no `def` in the file.
+      if (/called\s+but\s+not\s+defined|function.*not\s+defined|missing\s+function|function.*called.*not\s+defined/i.test(combined)) {
+        const funcNameMatch =
+          combined.match(/function\s+['"`]?([a-zA-Z_]\w*)['"`]?/i) ||
+          combined.match(/['"`]([a-zA-Z_]\w*)['"`]\s+is\s+called/i);
+        if (funcNameMatch && funcNameMatch[1]) {
+          const fn = funcNameMatch[1];
+          const isCalled   = new RegExp(`\\b${fn}\\s*\\(`).test(code);
+          const isDefined  = new RegExp(`\\bdef\\s+${fn}\\s*\\(`).test(code);
+          const isImported = new RegExp(`\\bimport\\b.*\\b${fn}\\b|\\bfrom\\b.*\\bimport\\b.*\\b${fn}\\b`).test(code);
+          // External call pattern: called, not locally defined, not imported — treat as external service
+          if (isCalled && !isDefined && !isImported) return false;
+        }
+      }
+
+      // ── Null/undefined dereference guard: code already uses optional chaining ──
+      if (/null.*deref|undefined.*property|unsafe.*nested|property.*access/i.test(combined)) {
+        if (bug.line && bug.line > 0) {
+          const srcLines = code.split('\n');
+          const ctx = srcLines.slice(Math.max(0, bug.line - 2), bug.line + 1).join(' ');
+          if (ctx.includes('?.') || ctx.includes('!= null') || ctx.includes('!== null') || ctx.includes('is not None')) {
+            return false;
+          }
         }
       }
 
