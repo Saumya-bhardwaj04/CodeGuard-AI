@@ -29,3 +29,6 @@ dist-ssr
 .env.local
 .env.*.local
 backend/.env
+
+# Extension lives in its own separate folder outside this repo
+codeguard-ai-extension/
