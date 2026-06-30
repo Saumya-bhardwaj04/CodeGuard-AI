@@ -2,7 +2,7 @@
   "name": "codeguard-ai-extension",
   "displayName": "CodeGuard AI - Bug Detection & Fixes",
   "description": "AI-powered bug detection and fix suggestion tool",
-  "version": "0.0.3",
+  "version": "0.0.4",
   "publisher": "codeguard-ai-official",
   "icon": "media/icon.png",
   "author": "CodeGuard AI Team",
@@ -40,7 +40,11 @@
     "commands": [
       {
         "command": "codeguard-ai.analyzeCurrentFile",
-        "title": "CodeGuard AI: Analyze Current File"
+        "title": "CodeGuard AI: Analyze Current File",
+        "icon": {
+          "light": "media/codeguard-activity.svg",
+          "dark": "media/codeguard-activity.svg"
+        }
       },
       {
         "command": "codeguard-ai.explainSelection",
@@ -77,6 +81,11 @@
     "menus": {
       "editor/title": [
         {
+          "command": "codeguard-ai.analyzeCurrentFile",
+          "group": "navigation@80",
+          "when": "editorLangId == python || editorLangId == javascript || editorLangId == java || editorLangId == javascriptreact || editorLangId == typescript || editorLangId == typescriptreact"
+        },
+        {
           "command": "codeguard-ai.safeRunFile",
           "group": "navigation@90",
           "when": "editorLangId == python || editorLangId == javascript"
@@ -95,6 +104,7 @@
     "views": {
       "codeguardAiSidebar": [
         {
+          "type": "webview",
           "id": "codeguardAiSidebar.view",
           "name": "Runtime Safety"
         }
